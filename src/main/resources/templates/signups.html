@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+    <head>
+        <title>Signups</title>
+    </head>
+    <body>
+
+        <h2>Signups</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th><th>Address</th><th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${signups.empty}">
+                    <td colspan="3">No signups</td>
+                </tr>
+                <tr th:each="signup : ${signups}">
+                    <td th:utext="${signup.name}">Name</td>
+                    <td th:utext="${signup.address}">Address</td>
+                    <td><form th:action="@{/signups/delete/{id}(id=${signup.id})}" th:method="get"><input type="submit" value="Remove"/></form></td>
+                </tr>
+            </tbody>
+        </table>
+    </body>
+</html>
+

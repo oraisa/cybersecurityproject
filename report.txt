@@ -1,0 +1,36 @@
+1. Outdated dependencies
+    - all dependencies use old version
+2. XSS
+    - name and address fields can be used to input javascript
+3. Security misconfiguration allowing CSRF
+    - deleting signups is possible through CSRF
+4. Broken access control
+    - everyone can view the signups page
+5. Broken authentication
+    - account name admin, password admin
+
+Issue: XSS
+Steps to reproduce:
+1. Go to http://localhost:8080/form
+2. Enter hello into the name field
+3. Enter world<script>alert("Hello world");</script> to the address field
+4. Go to http://localhost:8080/login
+5. Log in (username: ted, password: carrots)
+6. Go to http://localhost:8080/signups
+7. See the alert box the injected javascript opened
+
+How to fix:
+The fix is simple. Change both instances of th:utext to th:text in the
+signups.html template. th:text escapes html tags, so the attempted XSS string
+would be displayed as it was entered.
+
+Issue: Broken access control (anyone can see signups)
+1. Ensure you are not logged in (logout by going to http://localhost:8080/logout)
+2. Go to http://localhost:8080/signups
+3. You can see the page even though you are not logged in
+
+How to fix:
+In SecurityConfiguration.java, only urls matching /signups/delete/* require
+authentication, meaning that only deleting signups requires authentication.
+This should be changed to /signups*, meaning that seeing and deleting signups
+requires authentication.
