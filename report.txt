@@ -1,13 +1,10 @@
-1. Outdated dependencies
-    - all dependencies use old version
-2. XSS
-    - name and address fields can be used to input javascript
-3. Security misconfiguration allowing CSRF
-    - deleting signups is possible through CSRF
-4. Broken access control
-    - everyone can view the signups page
-5. Broken authentication
-    - account name admin, password admin
+The project is a Spring application based on the assignment template. You can
+find the project at https://github.com/oraisa/cybersecurityproject.
+
+The application allows people to signup for an event at http://localhost:8080/form.
+The organiser Ted can see the signups from http://localhost:8080/signups.
+Ted can also remove signups in case people inform him that they cannot attend
+afterall. Ted's username is ted and his password is carrots.
 
 Issue: XSS
 Steps to reproduce:
@@ -15,22 +12,103 @@ Steps to reproduce:
 2. Enter hello into the name field
 3. Enter world<script>alert("Hello world");</script> to the address field
 4. Go to http://localhost:8080/login
-5. Log in (username: ted, password: carrots)
+5. Log in (username: ted, password: carrots). The login page doesn't redirect anywhere.
 6. Go to http://localhost:8080/signups
 7. See the alert box the injected javascript opened
 
 How to fix:
 The fix is simple. Change both instances of th:utext to th:text in the
 signups.html template. th:text escapes html tags, so the attempted XSS string
-would be displayed as it was entered.
+would be displayed as it was entered. th:utext doesn't do any escaping, which
+allows the site to use html tags to style the inserted text but leaves the
+application vulnerable to XSS if the input for the tex t fields is untrusted.
 
-Issue: Broken access control (anyone can see signups)
+Issue: Broken Access Control (anyone can see signups)
+Steps to reproduce:
 1. Ensure you are not logged in (logout by going to http://localhost:8080/logout)
 2. Go to http://localhost:8080/signups
-3. You can see the page even though you are not logged in
+3. You can see the page even though you are not logged in. Only Ted should be
+able to see the page.
 
 How to fix:
 In SecurityConfiguration.java, only urls matching /signups/delete/* require
 authentication, meaning that only deleting signups requires authentication.
 This should be changed to /signups*, meaning that seeing and deleting signups
 requires authentication.
+
+Issue: Broken Authentication (admin/admin account)
+Steps to reproduce:
+1. Go to http://localhost:8080/login
+2. Enter admin as both username and password.
+3. Press login
+4. You are now logged in as an account name and password combination that is
+easy to guess. You can verify that you are logged in by creating a signup and
+deleting it. Only authenticated users can delete signups.
+
+How to fix:
+Remove the admin account by removing the line adding it in
+CustomUserDetailsService.java. Also, Ted's password is on the 10 000 most
+common passwords list, so that should also be changed.
+
+Issue: Using Components with Known Vulnerabilities
+Steps to reproduce:
+1. Open the project in Netbeans
+2. Click the project in in the Projects-view.
+3. Click dependency-check check in the Navigator.
+4. Open the report that is generated in target/dependency-check-report.html
+5. See that many of the components used by the application have known
+vulnerabilities.
+
+How to fix:
+Find the latest versions of all the components the application is using and
+modify pom.xml to use the latest versions of all the components. Afterwards
+ensure the application works with the latest versions and use dependency-check
+to check for any known vulnerabilities in them. If any are found, try to find
+a way to stop an attacker from using them.
+
+Issue: Security Misconfiguration (allows attacker to find application urls)
+Steps to reproduce:
+1. Implement the fix for Broken Access Control
+2. Ensure that you are logged out.
+3. Go to http://localhost:8080/signups
+4. You are redirected to the login page.
+5. Go to http://localhost:8080/hello_world
+6. You are redirected to the form page.
+7. This tells you that there's something in the signups url requiring login,
+possibly warranting further investigation.
+
+How to fix:
+The attacker shouldn't get a different response from the server when trying to
+access a url that exists but they don't have access to and a url that doesn't
+exist. Changing the default mapping in SignupController.java defined in the method
+defaultMapping to redirect to the login page ensures that people can only find
+the login page, but not the signup page. A better fix would be to make the signups
+page redirect to the form page if the user is not logged in. This way all regular
+users will be redirected to the form page so they won't be confused if they misspell
+the url. An attacker would still probably find the login page.
+
+Issue: Security Misconfiguration (allows removing signups by CSRF)
+Steps to reproduce:
+1. Go to http://localhost:8080/form
+2. Type something to the name and address fields and submit the signup.
+3. Log in at http://localhost:8080/login
+4. Go the http://localhost:8080/signups
+5. Find the signup's id by inspecting the remove button's html. It is in the
+url of the button's action. (An attacker could guess id's for signups, they
+are sequential starting from 1.)
+6. Open a page with an image at the url http://localhost:8080/signups/delete/{id}
+with the id of the signup. The project folder has the file csrf.html containing
+such an image. Remember to change the id in the url if it is not 1.
+7. Go back to the signup page (http://localhost:8080/signups)
+8. The signup is now gone.
+
+How to fix:
+Spring has built in CSRF protection that is enabled by default, but it doesn't
+help with operations that are done with GET requests. Deleting a signup should
+be made with a DELETE request and the CSRF protection would help then.
+The request type can be changed by simply changing the method parameter for
+the request mapping of "/signups/delete/{id}" in SignupController.java from
+RequestMethod.GET to RequestMethod.DELETE. Also, in the signups.html template,
+the method for the remove-button of signups has to be changed to delete.
+The csrf.html file in the project folder also contains a form that can be used
+to test the CSRF protection of Spring with the delete method.

